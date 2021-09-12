@@ -17,6 +17,7 @@ body {
   display: flex;
   flex-direction: row;
   max-width: 495px;
+  min-width: 495px;
   flex-wrap: wrap;
 }
 .container div {
