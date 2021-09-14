@@ -3,6 +3,12 @@ var rightNums = [];
 var right = 0;
 const boxCount = 81 + 1;
 const incrementCount = 9;
+var defaultColor = `#2f2f2f`;
+var score = 0;
+var audio = new Audio("./collectSound.wav");
+function removeAttributes(element, ...attrs) {
+  attrs.forEach((attr) => element.removeAttribute(attr));
+}
 for (let left = 1; left < boxCount; left += incrementCount) {
   leftNums.push(left);
   rightNums.push((right += incrementCount));
@@ -11,11 +17,13 @@ let colors = [
   `#a09c3e`,
   `#aa6124`,
   `#063d90`,
-  `#950d00`,
   `#ffb422`,
-  `#7d9d9d`,
+  `#39c8c8`,
   `#659ed0`,
-  `#0aa48f`,
+  `#3ba40a`,
+  `#2760a1`,
+  `#180682`,
+  `#a6130d`,
 ];
 let cu3 = 0;
 function randomColor(index) {
@@ -36,17 +44,15 @@ function randomColor(index) {
         cu1 = $(`div[index=${index + 1}]`).attr("color");
         cu2 = $(`div[index=${index - 9}]`).attr("color");
       }
-      console.log(index, `=>`, cu1, cu2, color);
+
       if (cu1 != color && cu2 != color) {
-        // console.log(cu3);
         loopBool = false;
+
         return color;
       }
     }
   }
 }
-console.log(leftNums);
-console.log(rightNums);
 var container = document.querySelector(".container");
 for (let i = 1; i < 82; i++) {
   let el = document.createElement("div");
@@ -60,7 +66,7 @@ for (let i = 1; i < 82; i++) {
   el.setAttribute("index", i);
   el.innerHTML = i;
   el.addEventListener("click", () => {
-    moveBall(el);
+    moveBall(el, null);
   });
   container.append(el);
 }
@@ -71,53 +77,117 @@ function isPossible(selected, target) {
   let sel = Number(selected.getAttribute("index"));
   let tar = Number(target.getAttribute("index"));
   if (!sel || !tar || sel == tar) {
-    console.log("hata");
-    return { error: 1, message: `Bir hata olustu.` };
+    return false;
   } else {
-    // // console.log(
-    // //   `sel ${sel}`,
-    // //   `rightNums.indexOf(sel) ${rightNums.indexOf(sel)}`,
-    // //   `leftNums.indexOf(sel) ${leftNums.indexOf(sel)}`
-    // // );
-    if (Math.abs(sel - tar) > 8) {
+    if (Math.abs(sel - tar) > incrementCount + 1) {
       console.log(`sadece 1 kare hareket edebilirsin`);
-      return { error: 1, message: `Bir hata olustu.` };
+      return false;
     }
     if (rightNums.includes(sel)) {
-      //? selected at right side
-      console.log(`selected at right side`);
+      //? selected at right or left side
+      console.log(`sadece 1 kare hareket edebilirsin`);
+      console.log(`selected at right or left side`);
+      let condition = sel + 1 == tar || sel + 10 == tar || sel - 8 == tar;
+      if (condition) {
+        return false;
+      }
+      return true;
       //
     } else if (leftNums.includes(sel)) {
-      //? selected at left side
-      console.log(`selected at left side`);
-      //
+      //? exceptions
+      let condition = sel - 1 == tar || sel - 10 == tar || sel + 8 == tar;
+      if (condition) {
+        return false;
+      }
+      return true;
+    } else {
+      //? possible move
+      moveBall(selected, target);
+
+      selected = ``;
+      return true;
     }
   }
-  selected = ``;
 }
 
 var selected = ``;
-function moveBall(el) {
+function moveBall(el, target) {
   $(`.selected[index!=${el.getAttribute("index")}]`).removeClass("selected");
   let className = "full";
   let isFull = el.classList.contains(className);
-
-  /* if (isFull && selected) {
-    // var nullDivs = document.querySelectorAll(".container div:not(.full)");
-    console.log(`cannot do this`);
-  } else */ if (!isFull && selected) {
+  if (!isFull && selected) {
     let res = isPossible(selected, el);
-    if (res && typeof res != `object`) {
-      el.classList.add(className);
-      el.innerHTML = `movedhere`;
-      selected = ``;
-    } else if (typeof res == `object`) {
-      console.log();
-    }
+    if (!res) return;
+    let color = selected.getAttribute("color");
+    el.classList.add(className);
+    el.style.backgroundColor = color;
+    el.setAttribute("color", color);
+    selected.classList.remove(className);
+    selected.classList.remove(`selected`);
+    removeAttributes(selected, "color", "style", "class");
+    selected = ``;
+    checkBalls(el);
   }
   let didSelected = hasClass(el, `selected`);
   if (!didSelected && isFull) {
     selected = el;
     el.classList.add("selected");
+  }
+}
+
+function checkBalls(el) {
+  let index = el.getAttribute("index");
+  index = Number(index);
+  let color = el.getAttribute("color");
+  var nearBalls = [];
+
+  if (rightNums.includes(index)) {
+    nearBalls.push($(`div[index="${index - 10}"]`).attr("index"));
+    nearBalls.push($(`div[index="${index - 9}"]`).attr("index"));
+    nearBalls.push($(`div[index="${index - 1}"]`).attr("index"));
+    nearBalls.push($(`div[index="${index + 8}"]`).attr("index"));
+    nearBalls.push($(`div[index="${index + 9}"]`).attr("index"));
+  } else if (leftNums.includes(index)) {
+    nearBalls.push($(`div[index="${index - 9}"]`).attr("index"));
+    nearBalls.push($(`div[index="${index - 8}"]`).attr("index"));
+    nearBalls.push($(`div[index="${index + 1}"]`).attr("index"));
+    nearBalls.push($(`div[index="${index + 9}"]`).attr("index"));
+    nearBalls.push($(`div[index="${index + 10}"]`).attr("index"));
+  } else {
+    nearBalls.push($(`div[index="${index - 10}"]`).attr("index"));
+    nearBalls.push($(`div[index="${index - 9}"]`).attr("index"));
+    nearBalls.push($(`div[index="${index - 8}"]`).attr("index"));
+    nearBalls.push($(`div[index="${index - 1}"]`).attr("index"));
+    nearBalls.push($(`div[index="${index + 1}"]`).attr("index"));
+    nearBalls.push($(`div[index="${index + 8}"]`).attr("index"));
+    nearBalls.push($(`div[index="${index + 9}"]`).attr("index"));
+    nearBalls.push($(`div[index="${index + 10}"]`).attr("index"));
+  }
+  for (let i = 0; i < nearBalls.length; i++) {
+    const ballIndex = nearBalls[i];
+    let condition = $(`div[index="${ballIndex}"]`).attr("color") == color;
+    if (condition) {
+      let cu1 = $(`div[index="${index}"]`).addClass("goingHome");
+      let cu2 = $(`div[index="${ballIndex}"]`).addClass("goingHome");
+      audio.play();
+      setTimeout(() => {
+        removeAttributes(
+          $(`div[index="${ballIndex}"]`)[0],
+          "color",
+          "style",
+          "class"
+        );
+        removeAttributes(
+          $(`div[index="${index}"]`)[0],
+          "color",
+          "style",
+          "class"
+        );
+        $(`.score`).html(++score);
+      }, 300);
+      break;
+    } else {
+      continue;
+    }
   }
 }
